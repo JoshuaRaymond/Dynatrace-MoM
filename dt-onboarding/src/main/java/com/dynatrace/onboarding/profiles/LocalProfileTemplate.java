@@ -273,6 +273,21 @@ public class LocalProfileTemplate implements ProfileTemplate {
 		return cast(elements.item(0));
 	}
 	
+	private Element getSensorGroupsElement(Document document) {
+		if (document == null) {
+			return null;
+		}
+		NodeList elements = document.getElementsByTagName("sensorgroups");
+		if (elements == null) {
+			return null;
+		}
+		int numElements = elements.getLength();
+		if (numElements == 0) {
+			return null;
+		}
+		return cast(elements.item(0));
+	}
+	
 	private Element getConfigurationsElement(Document document) {
 		if (document == null) {
 			return null;
@@ -286,6 +301,49 @@ public class LocalProfileTemplate implements ProfileTemplate {
 			return null;
 		}
 		return cast(elements.item(0));
+	}
+	
+	private Element getSensorGroup(Document document, String sensorGroupId) {
+		if (document == null) {
+			return null;
+		}
+		if (sensorGroupId == null) {
+			return null;
+		}
+		Element sensorGroups = getSensorGroupsElement(document);
+		NodeList elements = sensorGroups.getElementsByTagName("sensorgroup");
+		if (elements == null) {
+			return null;
+		}
+		int numElements = elements.getLength();
+		for (int i = 0; i < numElements; i++) {
+			Element sensorGroup = cast(elements.item(i));
+			if (sensorGroup == null) {
+				continue;
+			}
+			if (sensorGroupId.equals(sensorGroup.getAttribute("description"))) {
+				return sensorGroup;
+			}
+		}
+		return null;
+	}
+	
+	private void appendSensorGroup(Document document, Element sensorGroupElement) {
+		if (document == null) {
+			return;
+		}
+		if (sensorGroupElement == null) {
+			return;
+		}
+		String sensorGroupId = sensorGroupElement.getAttribute("description");
+		sensorGroupId = variables.resolve(sensorGroupId);
+		Element sensorGroup = getSensorGroup(document, sensorGroupId);
+		if (sensorGroup != null) {
+			getAgentGroupsElement(document).removeChild(sensorGroup);
+		}
+		sensorGroupElement = cast(document.importNode(sensorGroupElement, true));
+		Element sensorGroupsElement = getSensorGroupsElement(document);
+		sensorGroupsElement.appendChild(sensorGroupElement);
 	}
 	
 	private Element getAgentGroup(Document document, String agentGroupId) {
@@ -493,6 +551,7 @@ public class LocalProfileTemplate implements ProfileTemplate {
 			}
 			
 			NodeList tplAgentGroups = tplDoc.getElementsByTagName("agentgroup");
+			NodeList tplSensorGroups = tplDoc.getElementsByTagName("sensorgroup");
 			Element tplActiveConfiguration = getActiveConfiguration(tplDoc);
 			if (tplAgentGroups != null) {
 				int length = tplAgentGroups.getLength();
@@ -500,6 +559,7 @@ public class LocalProfileTemplate implements ProfileTemplate {
 					Element tplAgentGroup = (Element) tplAgentGroups.item(i);
 					String agentGroupId = tplAgentGroup.getAttribute("id");
 					appendAgentGroup(document, tplAgentGroup);
+					appendSensorGroup(document, (Element) tplSensorGroups.item(3));
 					Element tplActiveSensorConfig = getSensorConfig(tplActiveConfiguration, agentGroupId);
 					configurations = document.getElementsByTagName("configuration");
 					numConfigurations = configurations.getLength();
